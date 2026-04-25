@@ -131,11 +131,16 @@ void irobot_move(int16_t speed, int16_t angle) {
     printf("move\n");
     uint8_t buffer[5];
     buffer[0] = IROBOT_CMD_SET_SPEED;
-    buffer[1] = (uint8_t) (speed/8);
+    buffer[1] = (uint8_t) (speed>>8);
     buffer[2] = (uint8_t) (speed);
-    buffer[3] = (uint8_t) (angle/8);
+    buffer[3] = (uint8_t) (angle>>8);
     buffer[4] = (uint8_t) (angle);
     irobot_write(buffer, 5);
+
+    for (int i=0; i<5; i++) {
+	    printf("%d ", buffer[i]);
+    }
+    printf("\n");
 }
 
 
