@@ -1,3 +1,7 @@
+// ============================================================================
+//  Cabeçalho
+// ============================================================================
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -6,8 +10,11 @@
 
 #include "irobot.h"
 
-
 struct termios orig_termios;
+
+// ============================================================================
+//  Funções
+// ============================================================================
 
 // Restore terminal to its original state on exit
 void reset_terminal_mode() {
@@ -24,35 +31,39 @@ void set_conio_terminal_mode() {
     tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
 }
 
-int main() {
-    set_conio_terminal_mode();
+// ============================================================================
+//  Main
+// ============================================================================
 
+int main() {
+    // Inicializa o teclado no modo assincrono
+    set_conio_terminal_mode();
     struct pollfd pfd = { .fd = STDIN_FILENO, .events = POLLIN };
     char c;
-
     printf("Press keys (Press 'q' to quit)...\n");
 
-
+    // Inicializa a comunicação com o roomba
     int res = irobot_init("/dev/ttyUSB0");
     if ( res < 0 ) {
         return -1;
     }
 
-    int16_t speed = 0;
-    int16_t angle = 0;
-
+    // Inicializa o roomba no modo irrestrito
     irobot_start_full();
 
+    // Loop principal
     while (1) {
         // Poll for 100ms. Returns > 0 if a key was pressed.
         int ret = poll(&pfd, 1, 100);
 
         if (ret > 0 && (pfd.revents & POLLIN)) {
             if (read(STDIN_FILENO, &c, 1) > 0) {
+                // Caso apertado q: sai do programa
                 if (c == 'q') {
                     break;
                 }
 
+                // Caso apertado w, s, a, d, altera a velocidade do roomba 
                 if ( c == 'w' ) {
                     irobot_move(100, 0);
 
@@ -65,9 +76,11 @@ int main() {
                 } else if ( c == 'd' ) {
                     irobot_move(100, -100);
 
+                // Caso apertado espaço, pára o roomba
                 } else if ( c == ' ' ) {
                     irobot_move(0, 0);
 
+                // Nenhum dos casos acimas, simplesmente mostra a tecla
                 } else {
                     printf("Key pressed: %c\n", c);
                     fflush(stdout);
@@ -76,7 +89,7 @@ int main() {
         }
     }
 
-    // FIM
+    // Pára o movimento e fecha a comunicação com o roomba
     irobot_move_stop();
     irobot_close();
     return 0;
