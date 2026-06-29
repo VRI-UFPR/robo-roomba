@@ -21,4 +21,4 @@ void irobot_move(int16_t speed, int16_t angle);
 void irobot_move_stop();
 
 
-void irobot_read(int* a, int* b, int* c, int* d);
+void irobot_read();

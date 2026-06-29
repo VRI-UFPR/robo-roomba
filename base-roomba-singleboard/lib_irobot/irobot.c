@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "irobot.h"
 
@@ -36,6 +37,7 @@ int g_irobot_fd = -1;
 void irobot_signal_callback(int dummy) {
     printf("FIM\n");
     irobot_close();
+    exit(1);
 }
 
 
@@ -76,7 +78,7 @@ int irobot_init(const char* path_ttyusb) {
     settings.c_oflag = 0;
     settings.c_lflag = 0;
     settings.c_cc[VMIN]  = 0;  // The minimum number of bytes to read before read() returns
-    settings.c_cc[VTIME] = 1;  // The timeout in deciseconds (1/10th of a second)
+    settings.c_cc[VTIME] = 2;  // The timeout in deciseconds (1/10th of a second)
 
     result = tcsetattr(g_irobot_fd, TCSANOW, &settings);
     if(result == -1) {
@@ -175,6 +177,28 @@ int irobot_play(uint8_t music_index) {
 }
 
 void irobot_move(int16_t speed, int16_t angle) {
+    // Caso apenas gire
+    if ( speed == 0 ) {
+        // gira em sentido anti horario (exemplo: angle=-1 e speed=-100)
+        if ( angle < 0 ) {
+            speed = -angle;
+            angle = -1;
+
+        // gira em sentido horario (exemplo: angle=1 e speed=100)
+        } else if ( angle > 0 ) {
+            speed = angle;
+            angle = 1;
+        }
+
+    // Caso apenas vá para frente ou para trás
+    } else {
+        // exemplo angle = 0x8000 e speed=100
+        if ( angle == 0 ) {
+            angle = 0x8000;
+        }       
+    }
+
+    // Prepara e envia o pacote
     uint8_t buffer[5];
     buffer[0] = IROBOT_CMD_SET_SPEED;
     buffer[1] = (uint8_t) (speed>>8);
@@ -190,13 +214,20 @@ void irobot_move_stop() {
     irobot_write(buffer, 5);
 }
 
-void irobot_read(int* a, int* b, int* c, int* d) {
+void irobot_read() {
     // Stops the movement of the robot
     const uint8_t to_send[2] = {IROBOT_CMD_REQUEST_PACK,2};
     irobot_write(to_send, 2);
 
-    // show
-    char buffer[6];
-    const int bytes = read(g_irobot_fd, buffer, (size_t) 6 );
-    printf("opa %d\n", bytes);
+    // le os dados
+    char buffer[32];
+    const int bytes = read(g_irobot_fd, buffer, (size_t) 32 );
+
+#if DEBUG
+    printf("[IRobot::READ    ]: ");
+    for (int i=0; i<bytes; i++) {
+        printf("%x ", buffer[i]);
+    }
+    printf("\n");
+#endif
 }
